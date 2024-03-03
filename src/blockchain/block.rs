@@ -1,5 +1,6 @@
+use crate::blockchain::transaction::Transaction;
 use serde::{Deserialize, Serialize};
-use time::SystemTime;
+use sha2::{Digest, Sha256};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Block {
@@ -8,13 +9,6 @@ pub struct Block {
     pub transactions: Vec<Transaction>,
     pub proof: u64,
     pub previous_hash: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Transaction {
-    sender: String,
-    recipient: String,
-    amount: f32,
 }
 
 impl Block {
@@ -26,13 +20,29 @@ impl Block {
     ) -> Block {
         Block {
             index,
-            timestamp: SystemTime::now()
-                .duration_since(SystemTime::UNIX_EPOCH)
-                .unwrap()
-                .as_secs(),
+            timestamp: current_timestamp(),
             transactions,
             proof,
             previous_hash,
         }
     }
+
+    pub fn calculate_hash(&self) -> String {
+        let record = format!(
+            "{}{}{:?}{}{}",
+            &self.index,
+            &self.timestamp,
+            &self.transactions, // Đảm bảo rằng Transaction struct có thể được serialized
+            &self.proof,
+            &self.previous_hash,
+        );
+        let mut hasher = Sha256::new();
+        hasher.update(record);
+        format!("{:x}", hasher.finalize())
+    }
+}
+
+fn current_timestamp() -> u64 {
+    use chrono::Utc;
+    Utc::now().timestamp_millis() as u64
 }
